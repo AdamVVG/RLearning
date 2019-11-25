@@ -85,3 +85,8 @@ legend(0.82, 2.2, legend=c("2nd degree", "3rd degree", "4th degree", "5th degree
 head(mtcars)
 ```
 
+## It's all git from here
+
+- It's important to master git
+
+That's why I am practicing
