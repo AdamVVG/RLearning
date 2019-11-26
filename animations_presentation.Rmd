@@ -1,0 +1,150 @@
+---
+title: "Animations"
+author: "Adam Grünwald"
+date: '2019-11-26'
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library('gganimate')
+library('gifski')
+library('png')
+library('transformr')
+library('tidyverse')
+```
+
+## Presentation by Adam Grünwald
+
+In this presentation I play around with gganimate (https://cran.r-project.org/web/packages/gganimate/gganimate.pdf).
+
+I try some different options to present the iris dataset as well as visualizing some different polynomial regressions fit to synthetic data. In the final slide I have tried a time series animation which I think looks really neat!
+
+## Static plot
+
+```{r static}
+p <- ggplot(iris, aes(x = Petal.Width, y = Petal.Length)) + 
+    geom_point()
+
+plot(p)
+
+```
+
+## Animated plot
+
+```{r animation}
+anim <- p + 
+        transition_states(Species,
+                          transition_length = 2,
+                          state_length = 1) +
+        ease_aes('cubic-in-out')
+
+animate(anim)
+```
+
+## Not so smooth animation
+
+```{r not smooth}
+p <- ggplot(iris, aes(x = Petal.Width, y = Petal.Length)) + 
+        geom_point(aes(group = seq_along(Species)))
+
+anim <- p + 
+        transition_states(Species,
+                          transition_length = 2,
+                          state_length = 1) +
+        ease_aes('cubic-in-out') +
+        ggtitle('Now showing {next_state}',
+                subtitle = 'Frame {frame} of {nframes}')
+
+animate(anim)
+```
+
+## Another animation
+
+```{r colored animation}
+p <- ggplot(iris, aes(x = Petal.Width, y = Petal.Length)) + 
+        geom_point(aes(colour = Species, group = 1L))
+
+anim <- p + 
+        transition_states(Species,
+                          transition_length = 2,
+                          state_length = 1) +
+        ease_aes('cubic-in-out') +
+        ggtitle('Now showing {next_state}',
+                subtitle = 'Frame {frame} of {nframes}')
+
+animate(anim)
+```
+
+## Animation with fade
+
+```{r fade animation}
+p <- ggplot(iris, aes(x = Petal.Width, y = Petal.Length)) + 
+        geom_point(aes(colour = Species), size = 2)
+
+anim <- p + 
+        transition_states(Species,
+                          transition_length = 2,
+                          state_length = 1)
+animate(anim + 
+            enter_fade() +
+            exit_shrink())
+```
+
+## Line animations
+
+```{r line animation}
+set.seed(123)
+x = runif(500)
+mu = sin(2*(4*x-2)) + 2*exp(-(16^2)*((x-.5)^2))
+y = rnorm(500, mu, .3)
+d = data.frame(x,y)
+
+mod_poly2 = lm(y ~ poly(x, 2))
+poly2 = data.frame(x = x, y = as.numeric(predict(mod_poly2)))[order(x),]
+
+mod_poly3 = lm(y ~ poly(x, 3))
+poly3 = data.frame(x, y = as.numeric(predict(mod_poly3)))[order(x),]
+
+mod_poly4 = lm(y ~ poly(x, 4))
+poly4 = data.frame(x, y = as.numeric(predict(mod_poly4)))[order(x),]
+
+mod_poly5 = lm(y ~ poly(x, 5))
+poly5 = data.frame(x, y = as.numeric(predict(mod_poly5)))[order(x),]
+
+polynomialDf = tibble(x = poly2$x, second = poly2$y, third = poly3$y, fourth = poly4$y, fifth = poly5$y) %>%
+    gather(key = 'variable', value = 'value', -x)
+polynomialDf$variable = factor(polynomialDf$variable, levels = c('second', 'third', 'fourth', 'fifth'))
+
+
+p = ggplot() +
+        geom_point(data = d, aes(x = x, y = y), color = 'red', alpha = 1/4) +
+        geom_line(data = polynomialDf, aes(x = x, y = value, colour = variable, group = variable))
+
+anim = p +
+        transition_states(variable,
+                          transition_length = 2,
+                          state_length = 1)
+
+animate(anim)
+```
+
+## Time series animations
+
+```{r time series}
+airq <- airquality
+airq$Month <- format(ISOdate(2004,1:12,1),"%B")[airq$Month]
+
+anim = ggplot(airq, aes(Day, Temp, group = Month)) + 
+        geom_line() + 
+        geom_segment(aes(xend = 31, yend = Temp), linetype = 2, colour = 'grey') + 
+        geom_point(size = 2) + 
+        geom_text(aes(x = 31.1, label = Month), hjust = 0) + 
+        transition_reveal(Day) + 
+        coord_cartesian(clip = 'off') + 
+        labs(title = 'Temperature in New York', y = 'Temperature (°F)') + 
+        theme_minimal() + 
+        theme(plot.margin = margin(5.5, 40, 5.5, 5.5))
+
+animate(anim)
+```
